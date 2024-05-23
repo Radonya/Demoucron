@@ -100,7 +100,7 @@
           </div>
         </div>
 
-        <div v-if="lastColumnMin.length" class="flex">
+        <div v-if="lastMatrix.length" class="flex">
           <div class="bg-white shadow-lg rounded-lg p-4 ">
             <h2 class="text-xl font-bold mb-2">Matrice Finale</h2>
             <table class="border-collapse border border-gray-300 w-full">
@@ -470,123 +470,79 @@ export default {
 
     getLastMatrix(arg) {
       this.lastMatrix = this.matricesDataProperty[this.matricesDataProperty.length - 1];
-      if (arg === "min") {
-        this.updateLastColumnMin();
-      } else if (arg === "max") {
-        this.updatelastColumnMin();
-      }
+      
     }
     ,
     coloration(path) {
-      const visitedNodes = [];
-      const visitedEdges = new Set();
+  const visitedNodes = new Set();
+  const visitedEdges = new Set();
 
-      // Parcours de chaque chemin optimal
-      path.forEach(subPath => {
-        // Ajout de tous les nœuds visités dans une seule liste
-        visitedNodes.push(...subPath);
+  // Parcours de chaque chemin optimal
+  path.forEach(subPath => {
+    // Ajout de tous les nœuds visités dans un ensemble
+    subPath.forEach(node => visitedNodes.add(node));
 
-        // Marquage des arêtes entre les nœuds visités
-        for (let i = 0; i < subPath.length - 1; i++) {
-          const edgeId = this.edges.getIds({
-            filter: edge => (edge.from === subPath[i] && edge.to === subPath[i + 1]) || (edge.to === subPath[i] && edge.from === subPath[i + 1])
-          })[0];
-          if (edgeId) {
-            visitedEdges.add(edgeId);
-          }
-        }
-      });
+    // Marquage des arêtes entre les nœuds visités
+    for (let i = 0; i < subPath.length - 1; i++) {
+        const fromNode = subPath[i];
+        const toNode = subPath[i + 1];
 
-      // Mise à jour de la couleur des nœuds visités en jaune
-      visitedNodes.forEach(nodeLabel => {
-        const node = this.nodes.get(nodeLabel);
-        if (node) {
-          node.color = 'yellow';
-          this.nodes.update(node);
-        }
-      });
-
-      // Mise à jour de la couleur des arêtes visitées en rouge
-      visitedEdges.forEach(edgeId => {
-        const edge = this.edges.get(edgeId);
-        if (edge) {
-          edge.color = 'red';
-          this.edges.update(edge);
-        }
-      });
-
-      // Coloration des nœuds non visités en gris
-      this.nodes.forEach(node => {
-        if (!visitedNodes.includes(node.id)) {
-          node.color = "#A5B4FC";
-          this.nodes.update(node);
-        }
-      });
-
-      // Coloration des arêtes non visitées en gris
-      this.edges.forEach(edge => {
-        if (!visitedEdges.has(edge.id)) {
-          edge.color = "#A5B4FC";
-          this.edges.update(edge);
-        }
-      });
-    }
-    ,
-    updateLastColumnMin() {
-      this.minNodeIds = [];
-      this.minEdgeIds = [];
-      if (this.lastMatrix.length > 0) {
-        this.lastColumnMin = Array.from({ length: this.lastMatrix[0].length }, () => Infinity);
-        this.lastMatrix.forEach(row => {
-          row.forEach((value, index) => {
-            this.lastColumnMin[index] = Math.min(this.lastColumnMin[index], value);
-          });
-        });
-
-        const nodes = this.nodes.get();
-        nodes.forEach(node => {
-          const nodeIndex = this.adjacencyMatrixVertices.indexOf(node.label);
-          if (this.lastColumnMin[nodeIndex] === Math.min(...this.lastColumnMin)) {
-            this.minNodeIds.push(node.id);
-          }
-        });
-
-        const edges = this.edges.get();
-        edges.forEach(edge => {
-          const fromNodeIndex = this.adjacencyMatrixVertices.indexOf(this.nodes.get(edge.from).label);
-          if (this.lastColumnMin[fromNodeIndex] === Math.min(...this.lastColumnMin)) {
-            this.minEdgeIds.push(edge.id);
-          }
-        });
-      }
-    },
-    updatelastColumnMin() {
-      this.maxNodeIds = [];
-      this.maxEdgeIds = [];
-
-      if (this.lastMatrix.length > 0) {
-        this.lastColumnMin = Array.from({ length: this.lastMatrix[0].length }, () => Infinity);
-        this.lastMatrix.forEach(row => {
-          row.forEach((value, index) => {
-            this.lastColumnMin[index] = Math.max(this.lastColumnMin[index], value);
-          });
-        });
-
-        this.nodes.forEach(node => {
-          const nodeIndex = this.adjacencyMatrixVertices.indexOf(node.label);
-          if (this.lastColumnMin[nodeIndex] === Math.max(...this.lastColumnMin)) {
-            this.maxNodeIds.push(node.id);
-          }
-        });
-
+        // Recherche des arêtes correspondant aux nœuds connectés
         this.edges.forEach(edge => {
-          const fromNodeIndex = this.adjacencyMatrixVertices.indexOf(this.nodes.get(edge.from).label);
-          if (this.lastColumnMin[fromNodeIndex] === Math.max(...this.lastColumnMin)) {
-            this.maxEdgeIds.push(edge.id);
-          }
+            const fromNodeId = this.nodes.getIds({ filter: node => node.label === fromNode })[0];
+            const toNodeId = this.nodes.getIds({ filter: node => node.label === toNode })[0];
+            if ((edge.from === fromNodeId && edge.to === toNodeId) || (edge.from === toNodeId && edge.to === fromNodeId)) {
+                visitedEdges.add(edge.id);
+            }
         });
-      }
     }
+  });
+
+  // Mise à jour de la couleur des nœuds visités en jaune
+  visitedNodes.forEach(nodeLabel => {
+    const nodes = this.nodes.get({
+      filter: n => n.label === nodeLabel
+    });
+    nodes.forEach(node => {
+      console.log(`Coloring node ${nodeLabel} yellow`);
+      node.color = 'yellow';
+      this.nodes.update(node);
+    });
+  });
+
+  // Mise à jour de la couleur des arêtes visitées en rouge
+  visitedEdges.forEach(edgeId => {
+    const edge = this.edges.get(edgeId);
+    if (edge) {
+      console.log(`Coloring edge ${edgeId} red`);
+      edge.color = { color: 'green' };
+      this.edges.update(edge);
+    } else {
+      console.log(`Edge ${edgeId} not found`);
+    }
+  });
+
+  // Coloration des nœuds non visités en gris
+  this.nodes.forEach(node => {
+    if (!visitedNodes.has(node.label)) {
+      console.log(`Coloring node ${node.label} gray`);
+      node.color = "#A5B4FC";
+      this.nodes.update(node);
+    }
+  });
+
+  // Coloration des arêtes non visitées en gris
+  this.edges.forEach(edge => {
+    if (!visitedEdges.has(edge.id)) {
+      console.log(`Coloring edge ${edge.id} gray`);
+      edge.color = { color: "#A5B4FC" };
+      this.edges.update(edge);
+    }
+  });
+
+  // Forcer le rendu du graphe après les mises à jour
+  this.renderGraph();
+}
 
   },
 };
